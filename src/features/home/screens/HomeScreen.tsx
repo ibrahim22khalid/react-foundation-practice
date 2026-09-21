@@ -1,12 +1,18 @@
 import { useState } from "react";
-import { Button, FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LearningCard } from "../components/LearningCard";
-import {
-  learningItems as initialLearningItems,
-  LearningItem,
-} from "../types/learningItem";
+import { LearningItemForm } from "../components/LearningItemForm";
+import { learningItems as initialLearningItems } from "../types/learningItem";
+import type { LearningItem, NewLearningItemInput } from "../types/learningItem";
 
 const SCREEN_BACKGROUND_COLOR = "#ffffff";
 
@@ -28,13 +34,11 @@ export default function HomeScreen() {
       ),
     );
   }
-  function handleAddItem() {
+  function handleAddItem(input: NewLearningItemInput) {
     const newItem: LearningItem = {
       id: `lesson-${Date.now()}`,
-      title: "New learning item",
-      minutes: 30,
+      ...input,
       completed: false,
-      description: "A newly added learning item.",
     };
 
     setLearningItems((currentItems) => [...currentItems, newItem]);
@@ -48,14 +52,21 @@ export default function HomeScreen() {
   const completedCount = learningItems.filter((item) => item.completed).length;
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.content}>
-        <Button title="Add learning item" onPress={handleAddItem} />
-        <Text style={styles.completedText}>
-          Completed: {completedCount} / {learningItems.length}
-        </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+      >
         <FlatList
           data={learningItems}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <LearningItemForm onSubmit={handleAddItem} />
+              <Text style={styles.completedText}>
+                Completed: {completedCount} / {learningItems.length}
+              </Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <LearningCard
               title={item.title}
@@ -68,8 +79,10 @@ export default function HomeScreen() {
             />
           )}
           contentContainerStyle={styles.listContent}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
         />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -80,13 +93,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: SCREEN_BACKGROUND_COLOR,
   },
-  content: {
+  keyboardAvoidingView: {
     flex: 1,
     width: "100%",
     maxWidth: 420,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 8,
+    alignSelf: "center",
+  },
+  header: {
+    gap: 16,
+    marginBottom: 16,
   },
   completedText: {
     color: "#111827",
@@ -96,8 +111,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    justifyContent: "center",
     gap: 16,
-    paddingBottom: 16,
+    padding: 16,
   },
 });

@@ -6,6 +6,12 @@ export type LearningItem = {
   description?: string;
 };
 
+export type NewLearningItemInput = {
+  title: string;
+  minutes: number;
+  description?: string;
+};
+
 export const learningItems: LearningItem[] = [
   {
     id: 'lesson-1',
