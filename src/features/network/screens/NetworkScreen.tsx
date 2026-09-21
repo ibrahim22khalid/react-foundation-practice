@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from "react";
+import { Button, FlatList, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { EmptyView } from '../components/EmptyView';
-import { ErrorView } from '../components/ErrorView';
-import { LearningCard } from '../components/LearningCard';
-import { LoadingView } from '../components/LoadingView';
+import { EmptyView } from "../components/EmptyView";
+import { ErrorView } from "../components/ErrorView";
+import { LearningCard } from "../components/LearningCard";
+import { LoadingView } from "../components/LoadingView";
 
-type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
-type LoaderMode = 'success' | 'empty' | 'error';
+type LoaderMode = "success" | "empty" | "error";
 
 type NetworkLearningItem = {
   id: number;
@@ -16,48 +15,93 @@ type NetworkLearningItem = {
   completed: boolean;
 };
 
+export type AsyncState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; items: NetworkLearningItem[] }
+  | { status: "error"; message: string };
+
 const SUCCESS_ITEMS: NetworkLearningItem[] = [
-  { id: 1, title: 'Components and typed props', completed: true },
-  { id: 2, title: 'State and event handlers', completed: false },
-  { id: 3, title: 'Lists and keys', completed: false },
+  { id: 1, title: "Components and typed props", completed: true },
+  { id: 2, title: "State and event handlers", completed: false },
+  { id: 3, title: "Lists and keys", completed: false },
 ];
 
 async function fakeLoadItems(mode: LoaderMode): Promise<NetworkLearningItem[]> {
   await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
-  if (mode === 'error') {
-    throw new Error('The fake loader failed intentionally.');
+  if (mode === "error") {
+    throw new Error("The fake loader failed intentionally.");
   }
 
-  if (mode === 'empty') {
+  if (mode === "empty") {
     return [];
   }
 
   return SUCCESS_ITEMS;
 }
 
-export default function NetworkScreen() {
-  const [status, setStatus] = useState<RequestStatus>('idle');
-  const [items, setItems] = useState<NetworkLearningItem[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+function renderResult(state: AsyncState) {
+  switch (state.status) {
+    case "idle":
+      return (
+        <Text style={styles.message}>Press a button to begin the request.</Text>
+      );
 
-  const visibleStatus = status === 'success' && items.length === 0 ? 'empty' : status;
+    case "loading":
+      return <LoadingView message="Loading learning items..." />;
+
+    case "success":
+      if (state.items.length === 0) {
+        return <EmptyView message="No learning items were returned." />;
+      }
+
+      return (
+        <FlatList
+          data={state.items}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <LearningCard title={item.title} completed={item.completed} />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      );
+
+    case "error":
+      return <ErrorView message={state.message} />;
+
+    default: {
+      const unhandledState: never = state;
+      return unhandledState;
+    }
+  }
+}
+
+export default function NetworkScreen() {
+  const [state, setState] = useState<AsyncState>({ status: "idle" });
+
+  const visibleStatus =
+    state.status === "success" && state.items.length === 0
+      ? "empty"
+      : state.status;
 
   async function loadItems(mode: LoaderMode) {
-    setStatus('loading');
-    setItems([]);
-    setErrorMessage(null);
+    setState({ status: "loading" });
 
     try {
       const returnedItems = await fakeLoadItems(mode);
 
-      setItems(returnedItems);
-      setStatus('success');
+      setState({
+        status: "success",
+        items: returnedItems,
+      });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
 
-      setErrorMessage(message);
-      setStatus('error');
+      setState({
+        status: "error",
+        message,
+      });
     }
   }
 
@@ -70,48 +114,23 @@ export default function NetworkScreen() {
         <View style={styles.controls}>
           <Button
             title="Success"
-            onPress={() => loadItems('success')}
-            disabled={status === 'loading'}
+            onPress={() => loadItems("success")}
+            disabled={state.status === "loading"}
           />
           <Button
             title="Empty"
-            onPress={() => loadItems('empty')}
-            disabled={status === 'loading'}
+            onPress={() => loadItems("empty")}
+            disabled={state.status === "loading"}
           />
           <Button
             title="Error"
             color="#dc2626"
-            onPress={() => loadItems('error')}
-            disabled={status === 'loading'}
+            onPress={() => loadItems("error")}
+            disabled={state.status === "loading"}
           />
         </View>
 
-        <View style={styles.result}>
-          {status === 'idle' && (
-            <Text style={styles.message}>Press a button to begin the request.</Text>
-          )}
-
-          {status === 'loading' && <LoadingView message="Loading learning items..." />}
-
-          {status === 'error' && (
-            <ErrorView message={errorMessage ?? 'An unknown error occurred.'} />
-          )}
-
-          {status === 'success' && items.length === 0 && (
-            <EmptyView message="No learning items were returned." />
-          )}
-
-          {status === 'success' && items.length > 0 && (
-            <FlatList
-              data={items}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <LearningCard title={item.title} completed={item.completed} />
-              )}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
-        </View>
+        <View style={styles.result}>{renderResult(state)}</View>
       </View>
     </SafeAreaView>
   );
@@ -120,38 +139,38 @@ export default function NetworkScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   container: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 600,
-    alignSelf: 'center',
+    alignSelf: "center",
     padding: 16,
     gap: 16,
   },
   title: {
-    color: '#111827',
+    color: "#111827",
     fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
   },
   status: {
-    color: '#374151',
+    color: "#374151",
     fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   controls: {
     gap: 8,
   },
   result: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   message: {
-    color: '#4b5563',
-    textAlign: 'center',
+    color: "#4b5563",
+    textAlign: "center",
   },
   listContent: {
     gap: 12,
