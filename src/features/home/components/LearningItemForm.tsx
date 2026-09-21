@@ -19,7 +19,7 @@ export function LearningItemForm({ onSubmit }: LearningItemFormProps) {
   const isWholeNumber = /^\d+$/.test(trimmedMinutes) && Number.isInteger(parsedMinutes);
 
   const titleValidationError =
-    trimmedTitle.length === 0 ? "Title is required." : undefined;
+    trimmedTitle.length === 0 ? "Title is required." : trimmedTitle.length <= 2 ? "Title must be at least 3 characters long." : undefined;
 
   let minutesValidationError: string | undefined;
 
