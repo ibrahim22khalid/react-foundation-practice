@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -19,6 +19,7 @@ const SCREEN_BACKGROUND_COLOR = "#ffffff";
 export default function HomeScreen() {
   const [learningItems, setLearningItems] = useState(initialLearningItems);
   const completedCount = learningItems.filter((item) => item.completed).length;
+  // To replay the derived-state experiment, add useEffect to the React import.
   // const [completedCount, setCompletedCount] = useState(0);
 
   // if (__DEV__) {
