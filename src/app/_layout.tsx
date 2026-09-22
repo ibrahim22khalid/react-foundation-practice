@@ -12,6 +12,7 @@ export default function RootLayout() {
       <Tabs screenOptions={{ headerShown: false }}>
         <Tabs.Screen name="index" options={{ title: 'Home' }} />
         <Tabs.Screen name="network" options={{ title: 'Network' }} />
+        <Tabs.Screen name="effect" options={{ title: 'Effect' }} />
       </Tabs>
     </ThemeProvider>
   );

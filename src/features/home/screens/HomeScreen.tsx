@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -18,6 +18,29 @@ const SCREEN_BACKGROUND_COLOR = "#ffffff";
 
 export default function HomeScreen() {
   const [learningItems, setLearningItems] = useState(initialLearningItems);
+  const completedCount = learningItems.filter((item) => item.completed).length;
+  // const [completedCount, setCompletedCount] = useState(0);
+
+  // if (__DEV__) {
+  //   console.log("[Home] Component render", {
+  //     completedCount,
+  //     itemCount: learningItems.length,
+  //   });
+  // }
+
+  // useEffect(() => {
+  //   const nextCompletedCount = learningItems.filter(
+  //     (item) => item.completed,
+  //   ).length;
+
+  //   if (__DEV__) {
+  //     console.log("[Home] Synchronizing completed count", {
+  //       nextCompletedCount,
+  //     });
+  //   }
+
+  //   setCompletedCount(nextCompletedCount);
+  // }, [learningItems]);
 
   function handleAddMinutes(id: string) {
     setLearningItems((currentItems) =>
@@ -48,8 +71,6 @@ export default function HomeScreen() {
       currentItems.filter((item) => item.id !== id),
     );
   }
-  // Derive the completed count from the learningItems state
-  const completedCount = learningItems.filter((item) => item.completed).length;
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
