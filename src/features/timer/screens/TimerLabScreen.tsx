@@ -3,6 +3,7 @@ import { Button, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReactQueryMapping } from "../components/ReactQueryMapping";
+import { QuerySearchLab } from "../components/QuerySearchLab";
 import { SearchEffectLab } from "../components/SearchEffectLab";
 import { TimerPanel } from "../components/TimerPanel";
 
@@ -20,6 +21,7 @@ export default function TimerLabScreen() {
         />
         {showTimer ? <TimerPanel /> : null}
         <SearchEffectLab />
+        <QuerySearchLab />
         <ReactQueryMapping />
       </ScrollView>
     </SafeAreaView>

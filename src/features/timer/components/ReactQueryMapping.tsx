@@ -1,17 +1,18 @@
 import { StyleSheet, Text, View } from "react-native";
 
 const MAPPING = [
-  "The searchTerm Effect dependency would become part of the future query key.",
-  "The fakeSearch function would become the future query function.",
-  "React Query would manage the loading, data, and error state that is currently stored manually.",
-  "The manually created AbortController would be replaced by the AbortSignal that React Query provides to the query function.",
-  "The manual experiment has no cache or refetch behavior, while React Query would add configurable caching and refetching.",
+  "React Query replaced the manually stored loading, success, error, and result state with query status, data, and error values.",
+  "It replaced the manual Effect dependency, stale-result guard, request handlers, and cleanup orchestration.",
+  "React Query now creates the AbortSignal, while the query function passes it to the fake search function that consumes it.",
+  "The manual version had no keyed cache or freshness policy, while React Query caches each normalized term and keeps its data fresh for 60 seconds.",
+  "The draft input, submitted search term, and validation message remain local component state.",
+  "React Query does not replace all component state because it manages asynchronous request data rather than every user-interface interaction.",
 ] as const;
 
 export function ReactQueryMapping() {
   return (
     <View style={styles.mapping}>
-      <Text style={styles.heading}>Manual Effect → React Query</Text>
+      <Text style={styles.heading}>Manual Effect vs React Query</Text>
       {MAPPING.map((sentence, index) => (
         <Text key={sentence} style={styles.sentence}>
           {index + 1}. {sentence}

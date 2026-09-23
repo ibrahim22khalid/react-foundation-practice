@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 
-type SearchTerm = "heart" | "healing" | "error";
+import { fakeSearch, type SearchTerm } from "../api/search";
+
+type SearchRequest = {
+  term: SearchTerm;
+  attempt: number;
+};
 
 type SearchState =
   | { status: "idle" }
@@ -9,55 +14,8 @@ type SearchState =
   | { status: "success"; term: SearchTerm; result: string }
   | { status: "error"; term: SearchTerm; message: string };
 
-function createAbortError(): Error {
-  const error = new Error("The fake search was aborted.");
-  error.name = "AbortError";
-  return error;
-}
-
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
-}
-
-function fakeSearch(term: SearchTerm, signal: AbortSignal): Promise<string> {
-  const delay = term === "heart" ? 2500 : term === "healing" ? 300 : 500;
-
-  console.log(`[Search] Started: ${term}`);
-
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      console.log(`[Search] Aborted: ${term}`);
-      reject(createAbortError());
-      return;
-    }
-
-    const handleAbort = () => {
-      clearTimeout(timeoutId);
-      console.log(`[Search] Aborted: ${term}`);
-      reject(createAbortError());
-    };
-
-    const timeoutId = setTimeout(() => {
-      signal.removeEventListener("abort", handleAbort);
-
-      if (term === "error") {
-        const error = new Error("The fake search failed intentionally.");
-        console.log(`[Search] Failed: ${term}`);
-        reject(error);
-        return;
-      }
-
-      const result =
-        term === "heart"
-          ? "Heart result: a slow lesson about cardiac health."
-          : "Healing result: a quick lesson about recovery habits.";
-
-      console.log(`[Search] Completed: ${term}`);
-      resolve(result);
-    }, delay);
-
-    signal.addEventListener("abort", handleAbort, { once: true });
-  });
 }
 
 function getErrorMessage(error: unknown): string {
@@ -65,7 +23,9 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function SearchEffectLab() {
-  const [searchTerm, setSearchTerm] = useState<SearchTerm | null>(null);
+  const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(
+    null,
+  );
   const [searchState, setSearchState] = useState<SearchState>({
     status: "idle",
   });
@@ -85,36 +45,39 @@ export function SearchEffectLab() {
   // }, [searchTerm]);
 
   useEffect(() => {
-    if (searchTerm === null) {
+    if (searchRequest === null) {
       return;
     }
 
+    const { term, attempt } = searchRequest;
     let ignore = false;
     const controller = new AbortController();
 
-    fakeSearch(searchTerm, controller.signal).then(
+    console.log(`[Search] Attempt ${attempt}: ${term}`);
+
+    fakeSearch(term, controller.signal).then(
       (result) => {
         if (ignore) {
-          console.log(`[Search] Ignored stale result: ${searchTerm}`);
+          console.log(`[Search] Ignored stale result: ${term}`);
           return;
         }
 
-        setSearchState({ status: "success", term: searchTerm, result });
+        setSearchState({ status: "success", term, result });
       },
       (error: unknown) => {
         if (isAbortError(error)) {
-          console.log(`[Search] Intentional abort ignored: ${searchTerm}`);
+          console.log(`[Search] Intentional abort ignored: ${term}`);
           return;
         }
 
         if (ignore) {
-          console.log(`[Search] Ignored stale failure: ${searchTerm}`);
+          console.log(`[Search] Ignored stale failure: ${term}`);
           return;
         }
 
         setSearchState({
           status: "error",
-          term: searchTerm,
+          term,
           message: getErrorMessage(error),
         });
       },
@@ -122,25 +85,31 @@ export function SearchEffectLab() {
 
     return () => {
       ignore = true;
-      console.log(`[Search] Cleanup aborting: ${searchTerm}`);
+      console.log(`[Search] Cleanup aborting attempt ${attempt}: ${term}`);
       controller.abort();
     };
-  }, [searchTerm]);
+  }, [searchRequest]);
 
   function handleSearch(term: SearchTerm) {
     setSearchState({ status: "loading", term });
-    setSearchTerm(term);
+    setSearchRequest((currentRequest) => ({
+      term,
+      attempt: (currentRequest?.attempt ?? 0) + 1,
+    }));
   }
 
   return (
     <View style={styles.lab}>
       <Text style={styles.heading}>Stale Search Lab</Text>
-      <Text style={styles.experiment}>Lesson 4: obsolete work aborted</Text>
+      <Text style={styles.experiment}>Lesson 1: repeatable search attempts</Text>
       <Text style={styles.description}>
-        Start heart, then immediately start healing.
+        Search healing, wait for success, then search healing again.
       </Text>
       <Text style={styles.term}>
-        Current search: {searchTerm ?? "(none)"}
+        Current search: {searchRequest?.term ?? "(none)"}
+      </Text>
+      <Text style={styles.term}>
+        Request attempt: {searchRequest?.attempt ?? 0}
       </Text>
 
       <View style={styles.actions}>
