@@ -14,6 +14,7 @@ export default function RootLayout() {
         <Tabs.Screen name="network" options={{ title: 'Network' }} />
         <Tabs.Screen name="effect" options={{ title: 'Effect' }} />
         <Tabs.Screen name="timer" options={{ title: 'Timer' }} />
+        <Tabs.Screen name="navigation-lab" options={{ title: 'Navigation' }} />
       </Tabs>
     </ThemeProvider>
   );
