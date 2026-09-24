@@ -7,13 +7,17 @@ import { ErrorView } from "../components/ErrorView";
 import { LearningCard } from "../components/LearningCard";
 import { LoadingView } from "../components/LoadingView";
 
-type LoaderMode = "success" | "empty" | "error";
+export type LoaderMode = "success" | "empty" | "error";
 
-type NetworkLearningItem = {
+export type NetworkLearningItem = {
   id: number;
   title: string;
   completed: boolean;
 };
+
+export type NetworkLoader = (
+  mode: LoaderMode,
+) => Promise<NetworkLearningItem[]>;
 
 export type AsyncState =
   | { status: "idle" }
@@ -27,7 +31,7 @@ const SUCCESS_ITEMS: NetworkLearningItem[] = [
   { id: 3, title: "Lists and keys", completed: false },
 ];
 
-async function fakeLoadItems(mode: LoaderMode): Promise<NetworkLearningItem[]> {
+const fakeLoadItems: NetworkLoader = async (mode) => {
   await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
   if (mode === "error") {
@@ -39,7 +43,7 @@ async function fakeLoadItems(mode: LoaderMode): Promise<NetworkLearningItem[]> {
   }
 
   return SUCCESS_ITEMS;
-}
+};
 
 function renderResult(state: AsyncState) {
   switch (state.status) {
@@ -77,28 +81,34 @@ function renderResult(state: AsyncState) {
   }
 }
 
-export default function NetworkScreen() {
-  const [state, setState] = useState<AsyncState>({ status: "idle" });
+type NetworkLabProps = {
+  loader: NetworkLoader;
+};
+
+export function NetworkLab({ loader }: NetworkLabProps) {
+  const [requestState, setRequestState] = useState<AsyncState>({
+    status: "idle",
+  });
 
   const visibleStatus =
-    state.status === "success" && state.items.length === 0
+    requestState.status === "success" && requestState.items.length === 0
       ? "empty"
-      : state.status;
+      : requestState.status;
 
   async function loadItems(mode: LoaderMode) {
-    setState({ status: "loading" });
+    setRequestState({ status: "loading" });
 
     try {
-      const returnedItems = await fakeLoadItems(mode);
+      const returnedItems = await loader(mode);
 
-      setState({
+      setRequestState({
         status: "success",
         items: returnedItems,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
 
-      setState({
+      setRequestState({
         status: "error",
         message,
       });
@@ -114,26 +124,30 @@ export default function NetworkScreen() {
         <View style={styles.controls}>
           <Button
             title="Success"
-            onPress={() => loadItems("success")}
-            disabled={state.status === "loading"}
+            onPress={() => void loadItems("success")}
+            disabled={requestState.status === "loading"}
           />
           <Button
             title="Empty"
-            onPress={() => loadItems("empty")}
-            disabled={state.status === "loading"}
+            onPress={() => void loadItems("empty")}
+            disabled={requestState.status === "loading"}
           />
           <Button
             title="Error"
             color="#dc2626"
-            onPress={() => loadItems("error")}
-            disabled={state.status === "loading"}
+            onPress={() => void loadItems("error")}
+            disabled={requestState.status === "loading"}
           />
         </View>
 
-        <View style={styles.result}>{renderResult(state)}</View>
+        <View style={styles.result}>{renderResult(requestState)}</View>
       </View>
     </SafeAreaView>
   );
+}
+
+export default function NetworkScreen() {
+  return <NetworkLab loader={fakeLoadItems} />;
 }
 
 const styles = StyleSheet.create({

@@ -64,6 +64,7 @@ export function LearningItemForm({ onSubmit }: LearningItemFormProps) {
       <View style={styles.field}>
         <Text style={styles.label}>Title</Text>
         <TextInput
+          accessibilityLabel="Learning item title"
           value={title}
           onChangeText={setTitle}
           placeholder="Type a title"
@@ -79,6 +80,7 @@ export function LearningItemForm({ onSubmit }: LearningItemFormProps) {
       <View style={styles.field}>
         <Text style={styles.label}>Minutes</Text>
         <TextInput
+          accessibilityLabel="Learning item minutes"
           value={minutesText}
           onChangeText={setMinutesText}
           placeholder="5 to 240"
@@ -92,6 +94,7 @@ export function LearningItemForm({ onSubmit }: LearningItemFormProps) {
       <View style={styles.field}>
         <Text style={styles.label}>Description (optional)</Text>
         <TextInput
+          accessibilityLabel="Learning item description"
           value={description}
           onChangeText={setDescription}
           placeholder="Add a short description"
