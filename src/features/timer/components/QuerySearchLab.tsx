@@ -17,7 +17,13 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "An unknown error occurred.";
 }
 
-export function QuerySearchLab() {
+export type SearchFunction = typeof fakeSearch;
+
+type QuerySearchLabProps = {
+  search?: SearchFunction;
+};
+
+export function QuerySearchLab({ search = fakeSearch }: QuerySearchLabProps) {
   const [draftText, setDraftText] = useState("");
   const [normalizedTerm, setNormalizedTerm] = useState<SearchTerm | null>(
     null,
@@ -33,7 +39,7 @@ export function QuerySearchLab() {
         throw new Error("A valid search term is required.");
       }
 
-      return fakeSearch(normalizedTerm, signal);
+      return search(normalizedTerm, signal);
     },
     enabled: normalizedTerm !== null,
     retry: false,
