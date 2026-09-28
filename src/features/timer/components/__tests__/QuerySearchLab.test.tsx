@@ -1,4 +1,5 @@
 import { act, render, screen, userEvent } from '@testing-library/react-native';
+import { focusManager, onlineManager } from '@tanstack/react-query';
 
 import {
   createTestQueryClient,
@@ -166,5 +167,115 @@ describe('QuerySearchLab', () => {
     expect(
       await screen.findByText('Heart result from the explicit refetch.'),
     ).toBeOnTheScreen();
+  });
+
+  test('pauses an uncached search offline and starts it after reconnecting', async () => {
+    const previousOnlineState = onlineManager.isOnline();
+    const controlled = createControlledPromise<string>();
+    const search: SearchFunction = jest.fn(() => controlled.promise);
+    const user = userEvent.setup();
+
+    onlineManager.setOnline(false);
+
+    try {
+      await renderQuerySearchLab(search);
+
+      await user.type(
+        screen.getByLabelText('React Query search term'),
+        'heart',
+      );
+      await user.press(
+        screen.getByRole('button', { name: 'Search with React Query' }),
+      );
+
+      expect(screen.getByText('status: pending')).toBeOnTheScreen();
+      expect(screen.getByText('fetchStatus: paused')).toBeOnTheScreen();
+      expect(search).not.toHaveBeenCalled();
+
+      await act(async () => {
+        onlineManager.setOnline(true);
+      });
+
+      expect(
+        await screen.findByText('fetchStatus: fetching'),
+      ).toBeOnTheScreen();
+      expect(search).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        controlled.resolve('Heart result after reconnecting.');
+      });
+
+      expect(
+        await screen.findByText('Heart result after reconnecting.'),
+      ).toBeOnTheScreen();
+    } finally {
+      onlineManager.setOnline(previousOnlineState);
+    }
+  });
+
+  test('refetches a stale active query when the application regains focus', async () => {
+    const previousOnlineState = onlineManager.isOnline();
+    const initialTime = Date.now();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(initialTime);
+    let renderResult:
+      | Awaited<ReturnType<typeof renderQuerySearchLab>>
+      | undefined;
+    const firstSearch = createControlledPromise<string>();
+    const focusRefetch = createControlledPromise<string>();
+    const search: SearchFunction = jest
+      .fn()
+      .mockReturnValueOnce(firstSearch.promise)
+      .mockReturnValueOnce(focusRefetch.promise);
+
+    const user = userEvent.setup();
+    onlineManager.setOnline(true);
+    focusManager.setFocused(true);
+
+    try {
+      renderResult = await renderQuerySearchLab(search);
+
+      await user.type(
+        screen.getByLabelText('React Query search term'),
+        'heart',
+      );
+      await user.press(
+        screen.getByRole('button', { name: 'Search with React Query' }),
+      );
+
+      await act(async () => {
+        firstSearch.resolve('Heart result before backgrounding.');
+      });
+
+      expect(
+        await screen.findByText('Heart result before backgrounding.'),
+      ).toBeOnTheScreen();
+      expect(search).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        focusManager.setFocused(false);
+      });
+      dateNowSpy.mockReturnValue(initialTime + 60_001);
+
+      await act(async () => {
+        focusManager.setFocused(true);
+      });
+
+      expect(search).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        focusRefetch.resolve('Heart result after returning active.');
+      });
+
+      expect(
+        await screen.findByText('Heart result after returning active.'),
+      ).toBeOnTheScreen();
+    } finally {
+      await renderResult?.unmount();
+      await act(async () => {
+        focusManager.setFocused(undefined);
+        onlineManager.setOnline(previousOnlineState);
+      });
+      dateNowSpy.mockRestore();
+    }
   });
 });
