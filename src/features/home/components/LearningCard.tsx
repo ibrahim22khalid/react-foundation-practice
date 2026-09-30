@@ -4,9 +4,11 @@ type LearningCardProps = {
   title: string;
   minutes: number;
   completed: boolean;
-  onAddMinutes: () => void;
+  onAddMinutes?: () => void;
   onComplete: () => void;
-  onRemove: () => void;
+  onRemove?: () => void;
+  allowCompletedAction?: boolean;
+  isCompletionPending?: boolean;
   description?: string;
 };
 
@@ -17,6 +19,8 @@ export function LearningCard({
   onAddMinutes,
   onComplete,
   onRemove,
+  allowCompletedAction = false,
+  isCompletionPending = false,
   description,
 }: LearningCardProps) {
   return (
@@ -28,13 +32,25 @@ export function LearningCard({
       <Text>{minutes} minutes</Text>
       <Text>{completed ? 'Lesson completed' : 'Not completed yet'}</Text>
 
-      <Button title="Add 5 minutes" onPress={onAddMinutes} />
+      {onAddMinutes ? (
+        <Button title="Add 5 minutes" onPress={onAddMinutes} />
+      ) : null}
       <Button
-        title={completed ? 'Completed' : 'Mark as complete'}
+        title={
+          isCompletionPending
+            ? 'Saving...'
+            : completed && allowCompletedAction
+              ? 'Set completed again'
+              : completed
+                ? 'Completed'
+                : 'Mark as complete'
+        }
         onPress={onComplete}
-        disabled={completed}
+        disabled={isCompletionPending || (completed && !allowCompletedAction)}
       />
-      <Button title="Remove" color="#dc2626" onPress={onRemove} />
+      {onRemove ? (
+        <Button title="Remove" color="#dc2626" onPress={onRemove} />
+      ) : null}
     </View>
   );
 }
