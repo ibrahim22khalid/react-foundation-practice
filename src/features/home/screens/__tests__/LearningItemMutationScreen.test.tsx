@@ -1,5 +1,6 @@
 import {
   act,
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -63,7 +64,7 @@ describe("LearningItemMutationScreen", () => {
       const pendingAction = item.getByRole("button", { name: "Saving..." });
       expect(pendingAction).toBeDisabled();
 
-      await user.press(pendingAction);
+      fireEvent.press(pendingAction);
 
       expect(setCompletedSpy).toHaveBeenCalledTimes(1);
       expect(setCompletedSpy.mock.calls[0]?.[0]).toEqual({
