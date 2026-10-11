@@ -11,6 +11,7 @@ const DEFAULT_MUTATION_DELAY_MS = 800;
 let serverLearningItems = cloneLearningItems(initialLearningItems);
 let mutationDelayMs = DEFAULT_MUTATION_DELAY_MS;
 let shouldFailNextMutation = false;
+let listCallCount = 0;
 
 function cloneLearningItem(item: LearningItem): LearningItem {
   return { ...item };
@@ -33,8 +34,13 @@ function logRequest(message: string): void {
 }
 
 export async function listLearningItems(): Promise<LearningItem[]> {
+  listCallCount += 1;
   logRequest("List completed.");
   return cloneLearningItems(serverLearningItems);
+}
+
+export function getLearningItemsListCallCount(): number {
+  return listCallCount;
 }
 
 export async function setLearningItemCompleted(
@@ -95,4 +101,5 @@ export function resetLearningItemsApi(): void {
   serverLearningItems = cloneLearningItems(initialLearningItems);
   mutationDelayMs = DEFAULT_MUTATION_DELAY_MS;
   shouldFailNextMutation = false;
+  listCallCount = 0;
 }

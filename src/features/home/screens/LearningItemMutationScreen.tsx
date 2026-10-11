@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   failNextMutation,
+  getLearningItemsListCallCount,
   listLearningItems,
   setLearningItemCompleted,
 } from "../api/learningItems";
@@ -17,15 +18,26 @@ import type { LearningItem } from "../types/learningItem";
 
 const learningItemsQueryKey = ["learning-items"] as const;
 
+export type SuccessStrategy = "server-response" | "invalidate";
+
+type LearningItemMutationScreenProps = {
+  initialSuccessStrategy?: SuccessStrategy;
+};
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "The learning item could not be updated.";
 }
 
-export default function LearningItemMutationScreen() {
+export default function LearningItemMutationScreen({
+  initialSuccessStrategy = "server-response",
+}: LearningItemMutationScreenProps) {
   const queryClient = useQueryClient();
   const [failureArmed, setFailureArmed] = useState(false);
+  const [successStrategy, setSuccessStrategy] = useState<SuccessStrategy>(
+    initialSuccessStrategy,
+  );
 
   const learningItemsQuery = useQuery({
     queryKey: learningItemsQueryKey,
@@ -35,14 +47,21 @@ export default function LearningItemMutationScreen() {
   const completionMutation = useMutation({
     mutationFn: setLearningItemCompleted,
     retry: false,
-    onSuccess: (serverItem) => {
-      queryClient.setQueryData<LearningItem[]>(
-        learningItemsQueryKey,
-        (currentItems) =>
-          currentItems?.map((item) =>
-            item.id === serverItem.id ? serverItem : item,
-          ),
-      );
+    onSuccess: async (serverItem) => {
+      if (successStrategy === "server-response") {
+        queryClient.setQueryData<LearningItem[]>(
+          learningItemsQueryKey,
+          (currentItems) =>
+            currentItems?.map((item) =>
+              item.id === serverItem.id ? serverItem : item,
+            ),
+        );
+        return;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: learningItemsQueryKey,
+      });
     },
   });
 
@@ -80,10 +99,30 @@ export default function LearningItemMutationScreen() {
             {__DEV__ ? (
               <View style={styles.developmentPanel}>
                 <Text style={styles.panelHeading}>Development controls</Text>
+                <Text>success strategy: {successStrategy}</Text>
+                <Text>list calls: {getLearningItemsListCallCount()}</Text>
                 <Text>mutation status: {completionMutation.status}</Text>
                 <Text>
                   next mutation: {failureArmed ? "forced failure" : "success"}
                 </Text>
+                <View style={styles.strategyActions}>
+                  <Button
+                    title="Use server response"
+                    disabled={
+                      completionMutation.isPending ||
+                      successStrategy === "server-response"
+                    }
+                    onPress={() => setSuccessStrategy("server-response")}
+                  />
+                  <Button
+                    title="Use invalidation"
+                    disabled={
+                      completionMutation.isPending ||
+                      successStrategy === "invalidate"
+                    }
+                    onPress={() => setSuccessStrategy("invalidate")}
+                  />
+                </View>
                 <Button
                   title="Fail next mutation"
                   onPress={handleFailNextMutation}
@@ -167,6 +206,9 @@ const styles = StyleSheet.create({
   panelHeading: {
     color: "#1d4ed8",
     fontWeight: "700",
+  },
+  strategyActions: {
+    gap: 8,
   },
   errorPanel: {
     gap: 8,

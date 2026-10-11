@@ -4,6 +4,7 @@ import {
   render,
   screen,
   userEvent,
+  waitFor,
   within,
 } from "@testing-library/react-native";
 
@@ -12,12 +13,22 @@ import {
   createTestQueryWrapper,
 } from "../../../../test/create-test-query-client";
 import * as learningItemsApi from "../../api/learningItems";
-import LearningItemMutationScreen from "../LearningItemMutationScreen";
+import type { LearningItem } from "../../types/learningItem";
+import LearningItemMutationScreen, {
+  type SuccessStrategy,
+} from "../LearningItemMutationScreen";
 
-async function renderMutationScreen() {
+async function renderMutationScreen(
+  initialSuccessStrategy: SuccessStrategy = "server-response",
+) {
   const queryClient = createTestQueryClient();
   const wrapper = createTestQueryWrapper(queryClient);
-  const view = await render(<LearningItemMutationScreen />, { wrapper });
+  const view = await render(
+    <LearningItemMutationScreen
+      initialSuccessStrategy={initialSuccessStrategy}
+    />,
+    { wrapper },
+  );
 
   return { queryClient, view };
 }
@@ -33,6 +44,105 @@ describe("LearningItemMutationScreen", () => {
     learningItemsApi.resetLearningItemsApi();
     jest.restoreAllMocks();
     jest.useRealTimers();
+  });
+
+  test("server-response displays the returned item without another list request", async () => {
+    const initialItem: LearningItem = {
+      id: "lesson-test",
+      title: "Initial learning item",
+      minutes: 30,
+      completed: false,
+    };
+    const returnedServerItem: LearningItem = {
+      ...initialItem,
+      title: "Returned server item",
+      completed: true,
+    };
+    const listSpy = jest
+      .spyOn(learningItemsApi, "listLearningItems")
+      .mockResolvedValue([initialItem]);
+    jest
+      .spyOn(learningItemsApi, "setLearningItemCompleted")
+      .mockResolvedValue(returnedServerItem);
+    const user = userEvent.setup({
+      advanceTimers: jest.advanceTimersByTime,
+    });
+
+    const { queryClient, view } = await renderMutationScreen("server-response");
+
+    try {
+      expect(await screen.findByText("Initial learning item")).toBeOnTheScreen();
+
+      await user.press(
+        screen.getByRole("button", { name: "Mark as complete" }),
+      );
+
+      expect(await screen.findByText("Returned server item")).toBeOnTheScreen();
+      expect(screen.getByText("Lesson completed")).toBeOnTheScreen();
+      expect(listSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      await view.unmount();
+      queryClient.clear();
+    }
+  });
+
+  test("invalidation waits for another list request and displays its value", async () => {
+    const initialItem: LearningItem = {
+      id: "lesson-test",
+      title: "Initial learning item",
+      minutes: 30,
+      completed: false,
+    };
+    const returnedServerItem: LearningItem = {
+      ...initialItem,
+      title: "Mutation response item",
+      completed: true,
+    };
+    const refetchedItem: LearningItem = {
+      ...returnedServerItem,
+      title: "Refetched learning item",
+    };
+    let resolveRefetch: (items: LearningItem[]) => void = () => undefined;
+    const refetchPromise = new Promise<LearningItem[]>((resolve) => {
+      resolveRefetch = resolve;
+    });
+    const listSpy = jest
+      .spyOn(learningItemsApi, "listLearningItems")
+      .mockResolvedValueOnce([initialItem])
+      .mockReturnValueOnce(refetchPromise);
+    jest
+      .spyOn(learningItemsApi, "setLearningItemCompleted")
+      .mockResolvedValue(returnedServerItem);
+    const user = userEvent.setup({
+      advanceTimers: jest.advanceTimersByTime,
+    });
+
+    const { queryClient, view } = await renderMutationScreen("invalidate");
+
+    try {
+      expect(await screen.findByText("Initial learning item")).toBeOnTheScreen();
+
+      await user.press(
+        screen.getByRole("button", { name: "Mark as complete" }),
+      );
+
+      await waitFor(() => {
+        expect(listSpy).toHaveBeenCalledTimes(2);
+      });
+      expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
+      expect(screen.queryByText("Mutation response item")).not.toBeOnTheScreen();
+
+      await act(async () => {
+        resolveRefetch([refetchedItem]);
+      });
+
+      expect(await screen.findByText("Refetched learning item")).toBeOnTheScreen();
+      expect(screen.getByText("Lesson completed")).toBeOnTheScreen();
+      expect(listSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      await view.unmount();
+      queryClient.clear();
+    }
   });
 
   test("disables duplicate completion while pending and shows the server result", async () => {
