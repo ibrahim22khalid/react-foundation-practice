@@ -145,6 +145,111 @@ describe("LearningItemMutationScreen", () => {
     }
   });
 
+  test("optimistic success is visible before the server finishes and remains after reconciliation", async () => {
+    const user = userEvent.setup({
+      advanceTimers: jest.advanceTimersByTime,
+    });
+
+    const { queryClient, view } = await renderMutationScreen("optimistic");
+
+    try {
+      const targetTitle = await screen.findByText("State and event handlers");
+      const unrelatedTitle = screen.getByText("Lists and keys");
+      const targetCard = targetTitle.parent;
+      const unrelatedCard = unrelatedTitle.parent;
+
+      if (targetCard === null || unrelatedCard === null) {
+        throw new Error("The learning item cards were not rendered.");
+      }
+
+      const target = within(targetCard);
+      const unrelated = within(unrelatedCard);
+
+      expect(target.getByText("Not completed yet")).toBeOnTheScreen();
+      expect(unrelated.getByText("Not completed yet")).toBeOnTheScreen();
+
+      await user.press(
+        target.getByRole("button", { name: "Mark as complete" }),
+      );
+
+      expect(target.getByText("Lesson completed")).toBeOnTheScreen();
+      expect(target.getByRole("button", { name: "Saving..." })).toBeDisabled();
+      expect(screen.getByText("mutation status: pending")).toBeOnTheScreen();
+      expect(unrelated.getByText("Not completed yet")).toBeOnTheScreen();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1_000);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("mutation status: success")).toBeOnTheScreen();
+      });
+      expect(target.getByText("Lesson completed")).toBeOnTheScreen();
+      expect(
+        target.getByRole("button", { name: "Set completed again" }),
+      ).toBeEnabled();
+      expect(screen.getByText("list calls: 2")).toBeOnTheScreen();
+      expect(unrelated.getByText("Not completed yet")).toBeOnTheScreen();
+    } finally {
+      await view.unmount();
+      queryClient.clear();
+    }
+  });
+
+  test("optimistic failure restores the previous visible value and shows the error", async () => {
+    const user = userEvent.setup({
+      advanceTimers: jest.advanceTimersByTime,
+    });
+
+    const { queryClient, view } = await renderMutationScreen("optimistic");
+
+    try {
+      const targetTitle = await screen.findByText("State and event handlers");
+      const unrelatedTitle = screen.getByText("Lists and keys");
+      const targetCard = targetTitle.parent;
+      const unrelatedCard = unrelatedTitle.parent;
+
+      if (targetCard === null || unrelatedCard === null) {
+        throw new Error("The learning item cards were not rendered.");
+      }
+
+      const target = within(targetCard);
+      const unrelated = within(unrelatedCard);
+
+      await user.press(
+        screen.getByRole("button", { name: "Fail next mutation" }),
+      );
+      await user.press(
+        target.getByRole("button", { name: "Mark as complete" }),
+      );
+
+      expect(target.getByText("Lesson completed")).toBeOnTheScreen();
+      expect(target.getByRole("button", { name: "Saving..." })).toBeDisabled();
+      expect(screen.getByText("mutation status: pending")).toBeOnTheScreen();
+      expect(unrelated.getByText("Not completed yet")).toBeOnTheScreen();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1_000);
+      });
+
+      expect(
+        await screen.findByText(
+          "Save failed: The learning item could not be updated. Please try again.",
+        ),
+      ).toBeOnTheScreen();
+      expect(target.getByText("Not completed yet")).toBeOnTheScreen();
+      expect(
+        target.getByRole("button", { name: "Mark as complete" }),
+      ).toBeEnabled();
+      expect(screen.getByText("mutation status: error")).toBeOnTheScreen();
+      expect(screen.getByText("list calls: 2")).toBeOnTheScreen();
+      expect(unrelated.getByText("Not completed yet")).toBeOnTheScreen();
+    } finally {
+      await view.unmount();
+      queryClient.clear();
+    }
+  });
+
   test("disables duplicate completion while pending and shows the server result", async () => {
     const setCompletedSpy = jest.spyOn(
       learningItemsApi,

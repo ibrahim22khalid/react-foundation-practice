@@ -18,7 +18,10 @@ import type { LearningItem } from "../types/learningItem";
 
 const learningItemsQueryKey = ["learning-items"] as const;
 
-export type SuccessStrategy = "server-response" | "invalidate";
+export type SuccessStrategy =
+  | "server-response"
+  | "invalidate"
+  | "optimistic";
 
 type LearningItemMutationScreenProps = {
   initialSuccessStrategy?: SuccessStrategy;
@@ -47,6 +50,31 @@ export default function LearningItemMutationScreen({
   const completionMutation = useMutation({
     mutationFn: setLearningItemCompleted,
     retry: false,
+    onMutate: async (variables) => {
+      if (successStrategy !== "optimistic") {
+        return;
+      }
+
+      await queryClient.cancelQueries({
+        queryKey: learningItemsQueryKey,
+      });
+
+      const previousItems = queryClient.getQueryData<LearningItem[]>(
+        learningItemsQueryKey,
+      );
+
+      queryClient.setQueryData<LearningItem[]>(
+        learningItemsQueryKey,
+        (currentItems) =>
+          currentItems?.map((item) =>
+            item.id === variables.itemId
+              ? { ...item, completed: variables.completed }
+              : item,
+          ),
+      );
+
+      return { previousItems };
+    },
     onSuccess: async (serverItem) => {
       if (successStrategy === "server-response") {
         queryClient.setQueryData<LearningItem[]>(
@@ -56,6 +84,27 @@ export default function LearningItemMutationScreen({
               item.id === serverItem.id ? serverItem : item,
             ),
         );
+        return;
+      }
+
+      if (successStrategy === "invalidate") {
+        await queryClient.invalidateQueries({
+          queryKey: learningItemsQueryKey,
+        });
+      }
+    },
+    onError: (_error, _variables, onMutateResult) => {
+      if (successStrategy !== "optimistic" || !onMutateResult) {
+        return;
+      }
+
+      queryClient.setQueryData(
+        learningItemsQueryKey,
+        onMutateResult.previousItems,
+      );
+    },
+    onSettled: async () => {
+      if (successStrategy !== "optimistic") {
         return;
       }
 
@@ -121,6 +170,14 @@ export default function LearningItemMutationScreen({
                       successStrategy === "invalidate"
                     }
                     onPress={() => setSuccessStrategy("invalidate")}
+                  />
+                  <Button
+                    title="Use optimistic update"
+                    disabled={
+                      completionMutation.isPending ||
+                      successStrategy === "optimistic"
+                    }
+                    onPress={() => setSuccessStrategy("optimistic")}
                   />
                 </View>
                 <Button
