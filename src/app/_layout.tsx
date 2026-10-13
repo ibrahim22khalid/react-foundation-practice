@@ -1,3 +1,6 @@
+// Load web-only global styles once from the Expo Router root layout.
+import '@/global.css';
+
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DefaultTheme, Tabs, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';

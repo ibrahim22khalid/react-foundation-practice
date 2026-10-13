@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LearningCard } from "../components/LearningCard";
 import { LearningItemForm } from "../components/LearningItemForm";
+import { LearningProgressCard } from "../components/LearningProgressCard";
 import { learningItems as initialLearningItems } from "../types/learningItem";
 import type { LearningItem, NewLearningItemInput } from "../types/learningItem";
 
@@ -83,7 +84,54 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <View style={styles.header}>
+              {/* Show an independent zero-progress example. */}
+              <LearningProgressCard
+                title="React Native foundations"
+                completedMinutes={0}
+                totalMinutes={60}
+                actionLabel="Start lesson"
+                onPress={() => {}}
+              />
+
+              {/* Show an independent partial-progress example. */}
+              <LearningProgressCard
+                title="Accessible components"
+                completedMinutes={30}
+                totalMinutes={60}
+                actionLabel="Resume lesson"
+                onPress={() => {}}
+              />
+
+              {/* Show an independent completed-progress example. */}
+              <LearningProgressCard
+                title="Layout with Flexbox"
+                completedMinutes={60}
+                totalMinutes={60}
+                actionLabel="Review lesson"
+                onPress={() => {}}
+              />
+
+              {/* Show long title and action labels without limiting their lines. */}
+              <LearningProgressCard
+                title="Building adaptive and accessible React Native interfaces for narrow screens and large system text"
+                completedMinutes={45}
+                totalMinutes={90}
+                actionLabel="Continue the adaptive accessibility lesson"
+                onPress={() => {}}
+              />
+
+              {/* Show an explicitly disabled action and expose its state. */}
+              <LearningProgressCard
+                title="Advanced responsive layouts"
+                completedMinutes={15}
+                totalMinutes={60}
+                actionLabel="Resume locked lesson"
+                disabled
+                onPress={() => {}}
+              />
+
               <LearningItemForm onSubmit={handleAddItem} />
+
               <Text style={styles.completedText}>
                 Completed: {completedCount} / {learningItems.length}
               </Text>
