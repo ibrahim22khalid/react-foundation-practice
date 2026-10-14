@@ -48,11 +48,11 @@ export function MotionProgressLab() {
         onPress={handleReset}
         style={({ pressed }) => [
           styles.resetAction,
-          { borderColor: theme.text },
+          { borderColor: theme.background },
           pressed && styles.resetActionPressed,
         ]}
       >
-        <Text style={[styles.resetActionText, { color: theme.text }]}>
+        <Text style={[styles.resetActionText, { color: theme.background }]}>
           Reset progress
         </Text>
       </Pressable>
