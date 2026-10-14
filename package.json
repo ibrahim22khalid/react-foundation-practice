@@ -51,6 +51,8 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "resolver": "react-native-worklets/jest/resolver",
+    "setupFilesAfterEnv": ["<rootDir>/jest-setup.js"],
     "modulePathIgnorePatterns": ["<rootDir>/.kilo/"]
   },
   "private": true

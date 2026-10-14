@@ -1,4 +1,11 @@
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -37,6 +44,19 @@ export function LearningProgressCard(props: LearningProgressCardProps) {
     props.completedMinutes,
     props.totalMinutes,
   );
+  // Keep a separate visual value ready to drive the fill without owning progress.
+  const animatedProgressPercentage = useSharedValue(progressPercentage);
+  useEffect(() => {
+    animatedProgressPercentage.value = withTiming(progressPercentage, {
+      duration: 300,
+      reduceMotion: ReduceMotion.System,
+    });
+  }, [animatedProgressPercentage, progressPercentage]);
+
+  const animatedProgressStyle = useAnimatedStyle(() => ({
+    width: `${animatedProgressPercentage.value}%` as `${number}%`,
+  }));
+
   // Read the active theme without storing screen dimensions or theme data in state.
   const theme = useTheme();
   // Render a naturally sized card that grows when its text wraps.
@@ -64,11 +84,11 @@ export function LearningProgressCard(props: LearningProgressCardProps) {
           { backgroundColor: theme.backgroundSelected },
         ]}
       >
-        <View
+        <Animated.View
           style={[
             styles.progressFill,
+            animatedProgressStyle,
             {
-              width: `${progressPercentage}%`,
               backgroundColor: theme.text,
             },
           ]}
