@@ -24,6 +24,10 @@ export default function RootLayout() {
           <Tabs.Screen name="timer" options={{ title: 'Timer' }} />
           <Tabs.Screen name="mutation" options={{ title: 'Mutation' }} />
           <Tabs.Screen
+            name="notification-details"
+            options={{ href: null }}
+          />
+          <Tabs.Screen
             name="navigation-lab"
             options={{ title: 'Navigation' }}
           />

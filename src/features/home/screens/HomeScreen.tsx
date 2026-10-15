@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -12,12 +13,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LearningCard } from "../components/LearningCard";
 import { LearningItemForm } from "../components/LearningItemForm";
 import { MotionProgressLab } from "../components/MotionProgressLab";
+import { NotificationActionLab } from "../components/NotificationActionLab";
+import { notificationActionLabData } from "../data/notificationActionLabData";
 import { learningItems as initialLearningItems } from "../types/learningItem";
 import type { LearningItem, NewLearningItemInput } from "../types/learningItem";
 
 const SCREEN_BACKGROUND_COLOR = "#ffffff";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [learningItems, setLearningItems] = useState(initialLearningItems);
   const completedCount = learningItems.filter((item) => item.completed).length;
   // To replay the derived-state experiment, add useEffect to the React import.
@@ -73,6 +77,17 @@ export default function HomeScreen() {
       currentItems.filter((item) => item.id !== id),
     );
   }
+
+  function handleOpenNotificationDetails() {
+    router.push("/notification-details");
+  }
+
+  function handleMarkNotificationAsRead() {
+    if (__DEV__) {
+      console.log("[Notification Action Lab] Notification marked as read");
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -85,6 +100,13 @@ export default function HomeScreen() {
           ListHeaderComponent={
             <View style={styles.header}>
               <MotionProgressLab />
+              <NotificationActionLab
+                title={notificationActionLabData.title}
+                description={notificationActionLabData.description}
+                timeLabel={notificationActionLabData.timeLabel}
+                onOpenDetails={handleOpenNotificationDetails}
+                onMarkAsRead={handleMarkNotificationAsRead}
+              />
 
               <LearningItemForm onSubmit={handleAddItem} />
 
